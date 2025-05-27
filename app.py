@@ -35,9 +35,8 @@ if uploaded_files:
         st.success(f"✅ Combined {len(uploaded_files)} files successfully!")
         st.dataframe(all_data)
 
-        # Convert target columns to numeric (if they exist)
-        columns_to_convert = [0, 1, 14, 15]  # A, B, O, P → 0-based indexes
-        for col_index in columns_to_convert:
+        # Convert only O and P columns (indexes 14, 15) to numeric
+        for col_index in [14, 15]:  # 0-based index
             if col_index < len(all_data.columns):
                 try:
                     all_data.iloc[:, col_index] = pd.to_numeric(
@@ -45,7 +44,7 @@ if uploaded_files:
                         errors='coerce'
                     )
                 except Exception as e:
-                    st.warning(f"⚠️ Could not convert column {col_index + 1} to number: {e}")
+                    st.warning(f"⚠️ Column {col_index + 1} couldn't be converted: {e}")
 
         # Export to Excel
         output = io.BytesIO()
@@ -53,10 +52,8 @@ if uploaded_files:
             all_data.to_excel(writer, index=False, sheet_name="Combined")
 
             worksheet = writer.sheets["Combined"]
-            columns_to_format = [1, 2, 15, 16]  # A=1, B=2, O=15, P=16 in 1-based Excel
-
-            for row in worksheet.iter_rows(min_row=2):
-                for col_idx in columns_to_format:
+            for row in worksheet.iter_rows(min_row=2):  # skip header
+                for col_idx in [15, 16]:  # Excel columns O (15), P (16)
                     if col_idx <= len(row):
                         cell = row[col_idx - 1]
                         if isinstance(cell.value, (int, float)):

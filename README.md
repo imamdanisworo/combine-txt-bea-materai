@@ -1,2 +1,2 @@
 # combine-txt-bea-materai
-digunakan untuk combine txt materau
+digunakan untuk combine txt materai

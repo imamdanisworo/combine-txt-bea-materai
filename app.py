@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import io
 from openpyxl.styles import numbers
+from openpyxl.utils import get_column_letter
 
 st.title("📄 Pipe-Delimited TXT to Excel Combiner")
 
@@ -13,22 +14,19 @@ uploaded_files = st.file_uploader(
 
 if uploaded_files:
     all_data = pd.DataFrame()
-    header_ref = None  # To store the reference header
+    header_ref = None  # Store header reference from the first file
 
     for i, file in enumerate(uploaded_files):
         try:
-            # Read the file as pipe-separated
             df = pd.read_csv(file, sep="|", dtype=str, engine="python", on_bad_lines='skip')
 
-            # First file: keep header and store it
             if i == 0:
                 header_ref = list(df.columns)
                 all_data = df.copy()
             else:
-                # Compare first row to header — if it matches, it's a duplicate header row
                 first_row = df.iloc[0].tolist()
                 if first_row == header_ref:
-                    df = df.iloc[1:]  # Skip only the header row
+                    df = df.iloc[1:]  # Skip duplicate header
                 all_data = pd.concat([all_data, df], ignore_index=True)
 
         except Exception as e:
@@ -38,13 +36,24 @@ if uploaded_files:
         st.success(f"✅ Combined {len(uploaded_files)} files successfully.")
         st.dataframe(all_data)
 
+        # Write to Excel and apply formatting
         output = io.BytesIO()
         with pd.ExcelWriter(output, engine='openpyxl') as writer:
             all_data.to_excel(writer, index=False, sheet_name="Combined")
+
+            # Apply number formatting to selected columns: A, B, O, P
             worksheet = writer.sheets["Combined"]
-            for row in worksheet.iter_rows():
-                for cell in row:
-                    cell.number_format = numbers.FORMAT_GENERAL
+            columns_to_format = [1, 2, 15, 16]  # A=1, B=2, O=15, P=16
+
+            for row in worksheet.iter_rows(min_row=2):  # Skip header
+                for col_idx in columns_to_format:
+                    if col_idx <= len(row):  # Make sure column exists
+                        cell = row[col_idx - 1]
+                        try:
+                            float(cell.value)  # Check if value is numeric
+                            cell.number_format = numbers.FORMAT_NUMBER_COMMA_SEPARATED1
+                        except:
+                            pass  # Ignore non-numeric
 
         st.download_button(
             "📥 Download Combined Excel",
